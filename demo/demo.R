@@ -1,3 +1,5 @@
+library(mvtnorm)
+library(MCMCpack)
 ##data generation
 mu = list()
 #cluster means
@@ -10,9 +12,6 @@ for (i in 1:n){
   x[i,] = mvrnorm(1,mu[[index[i]]],diag(2))  #identity covariance matrices
 }
 
-
-# source('~/Dropbox/OxWaSP/Project7/GPUmix/R/GPUmix.R')
-source('~/Dropbox/OxWaSP/GPUmix.R')
 K=5
 res = MCMC(x,K,100,50)
 plot(x,col=res$z)
