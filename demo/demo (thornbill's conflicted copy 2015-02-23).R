@@ -1,18 +1,20 @@
+
 library(mvtnorm)
 library(MCMCpack)
+devtools::load_all()
 ##data generation
 mu = list()
 #cluster means
-mu[[1]] = c(5,1,2);mu[[2]]=c(-5,-1,-2)
+mu[[1]] = c(5,1);mu[[2]]=c(-5,-1)
 n = 1000
 pi = c(0.6,0.4)
-x = matrix(,n,3);index=c()
+x = matrix(,n,2);index=c()
 for (i in 1:n){
   index[i] = sample(1:2,1,prob=pi)
-  x[i,] = mvrnorm(1,mu[[index[i]]],diag(3))  #identity covariance matrices
+  x[i,] = mvrnorm(1,mu[[index[i]]],diag(2))  #identity covariance matrices
 }
 
-K=2
+K=6
 res = MCMC(x,K,100,50)
 plot(x,col=res$z)
 
@@ -24,21 +26,25 @@ plot(x,col=res$z)
 # 
 # t(x1)%*%(diag(length(which(index==1)))-matrix(1,length(which(index==1)),length(which(index==1)))/length(which(index==1)))%*%(x1)
 
+##profiling
+tmp = tempfile()   # get a temporary file
+Rprof(tmp, interval=0.001)
+MCMC(x,K,100,50)
+Rprof(NULL)
+summaryRprof(tmp)
 
 
-y=matrix(,n,3)
+y=matrix(,n,2)
 for (i in 1:n) {
   index = sample(1:K,1,prob=res$pires)
   y[i,] = mvrnorm(1,res$mu[[index]],res$Sigma[[index]])
 }
 
-par(mfrow=c(2,3))
+par(mfrow=c(2,2))
 hist(x[,1],breaks=100)
 hist(x[,2],breaks=100)
-hist(x[,3],breaks=100)
 hist(y[,1],breaks=52)
 hist(y[,2],breaks=100)
-hist(y[,3],breaks=100)
 # 
 # n = 1000
 # y=matrix(,n,2)
