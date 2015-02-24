@@ -1,6 +1,9 @@
 library(mvtnorm)
 library(MCMCpack)
 
+# dyn.load('mixpdf')
+
+
 MCMC = function(x,K,N,burnin){
   nr = nrow(x) ; nl = ncol(x); gamma=10; nu=1; Phi = diag(nl);mu0=rep(0,nl) ;alpha=1
   kappa0 = 1/gamma; nu0 = nu + 2; Lambda0 = solve(nu*Phi)
@@ -21,6 +24,10 @@ MCMC = function(x,K,N,burnin){
     out = out/sum(out)   
     return(out)
   }
+  
+#   out <- .C("mixpdf", as.integer(K),as.integer(nl),as.double(x), as.double(pi), as.double(unlist(Sigma)), result = as.double(rep(0,K)))
+  
+  
   
   #iterate
   for (step in 1:N) {
