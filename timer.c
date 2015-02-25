@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
- /*#include <R.h>*/
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
@@ -11,6 +10,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
 #include <omp.h> 
+#include <time.h>
 
 
 void sum_array(double *a,const int *num_elements, double *sum);
@@ -21,22 +21,65 @@ void gsl_matrix_set (gsl_matrix * m, size_t i, size_t j, double x);
 double dmvnorm(const int n, const gsl_vector *x, const gsl_vector *mean, const gsl_matrix *var);
 size_t gsl_vector_max_index (const gsl_vector * v);
 void gsl_vector_free (gsl_vector * v);
+void gsl_matrix_set_identity (gsl_matrix * m);
 
-/*
-void sum_array(double *a, const int *num_elements, double *sum){
+
+int main(){
+ 
+    const int nr1 = 100000, K1 = 10, nl1 = 10, *nr, *K, *nl;
+    nr = &nr1;
+    K = &K1;
+    nl = &nl1;
+    gsl_rng * r = gsl_rng_alloc (gsl_rng_taus);
+
+    double *pi;   
+    pi = malloc((*nl)*(*K)*sizeof(double));
+    for (int i=0; i < *K; i++){
+      *(pi+i) = (double) 1.0/((double) (*K));
+    }
+        
+    double *x;
+    x = malloc((*nl)*(*nr)*sizeof(double));
+    for (int i=0;i< (*nr)*(*nl); i++){
+      *(x+i) = gsl_rng_uniform (r);
+    }
     
-   for (int i=0; i < *num_elements; ++i){
-   *sum += *(a+i);
-  }
+    double *mu;
+    mu = malloc((*nl)*(*K)*sizeof(double));
+    for (int i=0; i< (*K)*(*nl); i++){
+      *(mu+i) = gsl_rng_uniform (r);
+    }
+
+    double *Sigma;
+    Sigma = malloc((*nl)*(*nl)*(*K)*sizeof(double));
+    for (int i=0; i< (*K)*(*nl)*(*nl); i++){
+      *(Sigma + i) = 0;
+    } 
+    for (int k=0; k < *K; k++){
+      for (int i=0; i< (*nl); i++){
+        *(Sigma + k*(*nl)*(*nl)+i*(*nl)+ i) = 1;
+      }
+    }
+    
+    double *assignment;   
+    clock_t t;
+    t = clock();
+    mixpdf(nr,K,nl,pi,x,mu,Sigma,assignment); 
+    t = clock() - t;
+    printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+    return 0;  
 }
-*/
+
 void mixpdf(const int *nr, const int *K, const int *nl, double *pi, double *x, double *mu, double *Sigma,double *assignment){
-       
-  #pragma omp parallel for 
+  
+  assignment = malloc((*nr)*sizeof(double));
+    #pragma omp parallel for 
 
   for (int m=0; m < *nr; m++){
   
-    const gsl_vector *X = gsl_vector_alloc(*nl);
+    gsl_vector *X = gsl_vector_alloc(*nl);
+    gsl_vector *pdf = gsl_vector_alloc(*K);
+
 
     for (int i=0; i< *nl; i++){
       double tmp1;
@@ -44,7 +87,6 @@ void mixpdf(const int *nr, const int *K, const int *nl, double *pi, double *x, d
       gsl_vector_set(X,i,tmp1);    
     }  
   
-     gsl_vector *pdf = gsl_vector_alloc(*K);
 
    for (int i=0; i< *K; i++) {
      
@@ -52,12 +94,14 @@ void mixpdf(const int *nr, const int *K, const int *nl, double *pi, double *x, d
      gsl_matrix *M = gsl_matrix_alloc (*nl, *nl);
      
      
-     for (int k=0; k< *nl; k++){
+     for (int k=0; k < *nl; k++){
        double tmp0;
        tmp0 = *(mu + i*(*nl) + k);
        gsl_vector_set(V,k,tmp0);
-
-       for (int j=0; j< *nl; j++){
+     }
+     
+     for (int k=0; k< *nl; k++){
+      for (int j=0; j< *nl; j++){
           double tmp;
           tmp = *(Sigma + i*(*nl)*(*nl) + k*(*nl) + j);
           gsl_matrix_set (M, k, j, tmp);
@@ -66,39 +110,21 @@ void mixpdf(const int *nr, const int *K, const int *nl, double *pi, double *x, d
      int n;
      n = *nl;
      
-     gsl_vector_set(pdf,i,*(pi+i) * dmvnorm( n, X, V, M));
+     gsl_vector_set(pdf,i,*(pi+i) * dmvnorm( n, X, V, M)); 
+     gsl_vector_free (V);
+     gsl_matrix_free (M); 
+     }  
      
-   /*  *(pdf+i) = *(pi+i) * dmvnorm( n, V, V, M); */
-   } 
-   gsl_vector_free (X);
+     gsl_vector_free (X);    
     *(assignment+m) = gsl_vector_max_index (pdf);   
-    gsl_vector_free (pdf);
+     gsl_vector_free (pdf);  
     
-
   }  
-    /* *(pdf+i) = *(pi+i) * gsl_ran_bivariate_gaussian_pdf (*x-*(mu + i*(*nl)), *(x+1)-*(mu + i*(*nl)+1), sqrt(*(Sigma+i*(*nl)*(*nl))),
-                     sqrt(*(Sigma+i*(*nl)*(*nl)+3)),(double) *(Sigma+i*(*nl)*(*nl)+1)/(double) sqrt(( *(Sigma+i*(*nl)*(*nl)) * *(Sigma+i*(*nl)*(*nl)+3)))) ;
-                                } */
-    /*
   
-  double sum1=0;
-  double *sum;
-  sum = &sum1;
-  sum_array(pdf, K, sum); 
-
-  for (int i=0; i< *K; i++){
-    *(pdf+i) = (double) *(pdf+i)/ (double) *sum;
-  }
- */
 }
 
 double dmvnorm(const int n, const gsl_vector *x, const gsl_vector *mean, const gsl_matrix *var){
-/* multivariate normal density function    */
-/*
-*  n	dimension of the random vetor
-*	mean	vector of means of size n
-*	var	variance matrix of dimension n x n
-*/
+
   int s;
   double ax,ay;
   gsl_vector *ym, *xm;
@@ -126,65 +152,3 @@ double dmvnorm(const int n, const gsl_vector *x, const gsl_vector *mean, const g
   
   return ay;
 }
-
-
-/*
-int main(){
-    
-     
-    
-    const int a = 1;
-    const int *K;
-    K = &a;
-    double b = 1;
-    double *pi;    
-    pi = &b;
-    const int c = 1;
-    const int *nl;
-    nl = &c;
-    double out1 = 0;
-    double *out;
-    out = &out1;
-    
-
-    mixpdf(K,nl,pi,out);
-    printf("the result is %f\n", *out);
-
-    return(0);
-}
-
-
-
-
-
-
-
-
-
-int main(){
- arrays: double *b,  b[i]= *(b+i)
- matrices: double *B, B[i][j] = *(B + i*m +j)   (B nxm)
- 3-d array: B[i][j][p] = *(B+i*m*k+j*k+p)   (B n*m*k)
-
-double x[n][nl], double pi[K],double mu[K],double Sigma[K]
-  double out[K];  
-  const unsigned int n=100;
-const unsigned int nl=2;
-const unsigned int K=3;
-
-  
-  for (int i=1;i<K+1;i++) {
-    out[i] = pi[i] * gsl_ran_bivariate_gaussian_pdf (mu[i][1], mu[i][1], Sigma[i][1][1], Sigma[i][2][2], Sigma[i][1][2]); 
-    printf("prob is %d\n",out[i]);
-  }
-  
-  for (int i=1; i<K+1; i++){
-    out[i] = out[i]/sum_array(out,K);
-    return(out[i]);
-  }
-  
-  return(0);
-}
-*/
- 
-  

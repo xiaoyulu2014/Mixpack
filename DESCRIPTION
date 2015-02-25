@@ -1,9 +1,11 @@
-Package: GPUmix
+Package: Mixpack
 Type: Package
-Title: What the package does (short line)
+Title: A hierarchical Bayesian mixture models with codes calling from C.
 Version: 1.0
 Date: 2015-02-19
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Author: Xiaoyu Lu
+Maintainer:  <xiaoyu.lu@new.ox.ac.uk>
+Description: A Bayesian model learning the number of clusters, cluster means and covariance matrices. 
+The speed up is achieved via the C codes and parallelization using OpenMP.
+Suggests: knitr
+VignetteBuilder: knitr

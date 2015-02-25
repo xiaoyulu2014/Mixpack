@@ -1,7 +1,7 @@
 library(mvtnorm)
 library(MCMCpack)
 
-# dyn.load("/homes/xlu/Dropbox/OxWaSP/Project7/GPUmix/src/GPUmix.so")
+dyn.load("/homes/xlu/Dropbox/OxWaSP/Project7/GPUmix/src/GPUmix.so")
 
 MCMC = function(x,K,N,burnin){
   nr = nrow(x) ; nl = ncol(x); gamma=10; nu=1; Phi = diag(nl);mu0=rep(0,nl) ;alpha=1
@@ -13,43 +13,19 @@ MCMC = function(x,K,N,burnin){
     mu[[j]] = mvrnorm(1,mu0,gamma*Sigma[[j]])
   }
   
-  pi = rep(1/K,K)
+  pi = rep(1/K,K);z = c();n=rep(0,K);
   
-  z = c();n=rep(0,K);out = c()
-  pdf_func = function(x,pi,mu,Sigma) {
-    for (j in 1:K){
-      out[j] = pi[j] * dmvnorm(x,mu[[j]],Sigma[[j]])       
-    }
-    out = out/sum(out)   
-    return(out)
-  }
-  
-
-    out <- .C("mixpdf", as.integer(K), as.integer(nl), as.double(pi), as.double(x[1,]),as.double(unlist(mu)), as.double(unlist(Sigma)), 
-                                                   result = as.double(rep(0,2)))
-#   
   #iterate
   for (step in 1:N) {
-    
-    for (i in 1:nr) {
-      
-      pdf = .C("mixpdf", as.integer(K), as.integer(nl), as.double(pi), as.double(x[i,]),as.double(unlist(mu)), as.double(unlist(Sigma)), 
-               result = as.double(rep(0,2)))$result
-#     pdf = pdf_func(x[i,],pi,mu,Sigma)
-      #resample indices
-      #z[i] = sample(1:K,size=1, prob=pdf)
-      z[i] = which.max(pdf)
-    }
+
+    z = .C("mixpdf", as.integer(nr),as.integer(K), as.integer(nl), as.double(pi), as.double(t(x)),as.double(unlist(mu)), 
+           as.double(unlist(Sigma)), result = as.double(rep(0,nr)))$result + 1
     
     for (k in 1:K) {
       n[k] = length(which(z==k))
     }
     
     #resample means and covariance matrices
-    #prior
-    
-    
-    #posterior parameters
     for (j in 1:K) {
       X = x[which(z==j),]
       if (n[j]==0) {
@@ -102,3 +78,27 @@ MCMC = function(x,K,N,burnin){
   }
   return(list(pires = pi,mu = mu, Sigma = Sigma, z=z))
 }
+
+
+
+#     for (i in 1:nr) {       
+# #       pdf = .C("mixpdf", as.integer(K), as.integer(nl), as.double(pi), as.double(x[i,]),as.double(unlist(mu)), as.double(unlist(Sigma)), 
+# #                result = as.double(rep(0,K)))$result
+#     pdf = pdf_func(x[i,],pi,mu,Sigma)
+#       #resample indices
+#       #z[i] = sample(1:K,size=1, prob=pdf)
+#       z[i] = which.max(pdf)
+#     }
+
+
+#   out = c()
+#   pdf_func = function(x,pi,mu,Sigma) {
+#     for (j in 1:K){
+#       out[j] = pi[j] * dmvnorm(x,mu[[j]],Sigma[[j]])       
+#     }
+#     out = out/sum(out)   
+#     return(out)
+#   }
+#     out <- .C("mixpdf", as.integer(K), as.integer(nl), as.double(pi), as.double(x[1,]),as.double(unlist(mu)), as.double(unlist(Sigma)), 
+#                                                    result = as.double(rep(0,2)))
+# 
