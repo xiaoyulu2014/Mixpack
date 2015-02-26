@@ -26,7 +26,7 @@ void gsl_matrix_set_identity (gsl_matrix * m);
 
 int main(){
  
-    const int nr1 = 100000, K1 = 10, nl1 = 10, *nr, *K, *nl;
+    const int nr1 = 1000, K1 = 5, nl1 = 3, *nr, *K, *nl;
     nr = &nr1;
     K = &K1;
     nl = &nl1;
@@ -73,7 +73,7 @@ int main(){
 void mixpdf(const int *nr, const int *K, const int *nl, double *pi, double *x, double *mu, double *Sigma,double *assignment){
   
   assignment = malloc((*nr)*sizeof(double));
-    #pragma omp parallel for 
+  /* #pragma omp parallel for */
 
   for (int m=0; m < *nr; m++){
   

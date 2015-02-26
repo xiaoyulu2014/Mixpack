@@ -4,18 +4,19 @@ devtools::load_all()
 ##data generation
 mu = list()
 #cluster means
-mu[[1]] = c(5,1,2);mu[[2]]=c(-5,-1,-2)
+mu[[1]] = c(5,1,2);mu[[2]]=c(-5,-1,-2);mu[[3]] = c(0,2,0)
 n = 1000
-pi = c(0.6,0.4)
+pi = c(0.6,0.3,0.1)
 x = matrix(,n,3);index=c()
 for (i in 1:n){
-  index[i] = sample(1:2,1,prob=pi)
+  index[i] = sample(1:3,1,prob=pi)
   x[i,] = mvrnorm(1,mu[[index[i]]],diag(3))  #identity covariance matrices
 }
 
 K=5
 res = MCMC(x,K,100,50)
-plot(x,col=res$z)
+plot(x)
+points(x,col=res$z)
 
 
 y=matrix(,n,3)
